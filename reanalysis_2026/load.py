@@ -12,6 +12,12 @@ OUT = HERE / 'output'
 GSW = HERE.parent / 'GSW_YearlyHistory_nodata_60deltas.csv'
 YEARS = np.arange(1990, 2021)
 
+# The authors' GSW_100.m reads 10 deltas from the neighbouring column of their Earth Engine export.
+# SRC[delta] = name of the published column that actually holds that delta's land series.
+SRC = {'Zambezi': 'Liaohe', 'Mackenzie': 'Minjiang', 'Burdekin': 'Zambezi', 'Sebou': 'Mackenzie', 'Paraiba Do Sul': 'Burdekin',
+       'Murray': 'Sebou', 'Dnieper (Dnepr)': 'Paraiba Do Sul', 'Brahmani': 'Murray', 'Liaohe': 'Dnieper (Dnepr)',
+       'Minjiang': 'Brahmani'}
+
 
 def authors():
     """Annual sediment load (t/yr) and smoothed 'active delta land area' (km2) as released by Wang et al."""
@@ -19,6 +25,12 @@ def authors():
     A = pd.read_excel(DATA / '2_Annual_active_land_area.xlsx', index_col=0)
     Q.columns = A.columns = [c.strip() for c in A.columns]
     return Q, A
+
+
+def authors_own():
+    """Published land areas re-attached to the delta whose polygon they come from (see SRC)."""
+    A = authors()[1]
+    return pd.DataFrame({n: A[SRC.get(n, n)].values for n in A.columns}, index=A.index)
 
 
 def mat(name):

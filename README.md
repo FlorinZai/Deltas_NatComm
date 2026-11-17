@@ -14,11 +14,13 @@ Run from inside `reanalysis_2026/`, in this order:
 
 | Script | What it does |
 |---|---|
-| `analysis.py` | Cross-correlation between total sediment load and global land change rate for the published (smoothed) data, the unsmoothed data, the data with gap years removed, the 27 deltas without gaps, and 2000-2020 only. Significance from 10,000 phase-randomised surrogates. Writes `output/lag_results.csv`, `output/xcorr_curves.csv`. |
+| `analysis.py` | Cross-correlation between sediment load and global land change rate for the published (smoothed) data, the unsmoothed data, the data with gap years removed (without and with the authors' smoothing), the 27 deltas without gaps, and 2000-2020 only. Significance from 10,000 phase-randomised surrogates. Writes `output/lag_results.csv`, `output/xcorr_curves.csv` and `output/sensitivity_threshold.csv` (sensitivity to the "no data" threshold). |
 | `check_authors_code.py` | Checks of the authors' released files and code: "no data" statistics, their Figure 3 lag and P-values, growth rates, delta-scale lags, and the land series assigned to the wrong deltas. Prints the numbers and writes `output/per_delta_check.csv`. |
 | `figure2.py` | Figure 2 of the Matters Arising (`output/Figure2.png`). Needs the output of `analysis.py`. |
 
 `load.py` and `xc.py` hold the data loaders and the cross-correlation (Eq. 3 of the paper, MATLAB `xcorr(...,'coeff')`).
+`matlab_smooth.py` is a Python implementation of the authors' land processing (zeros set to missing, `fillmissing(...,'movmean',5)`,
+`smoothdata(...,'rlowess',5)`); run on its own, it compares the result with their smoothed land (52 of 60 delta series identical).
 
 ### Data
 
@@ -28,7 +30,7 @@ Run from inside `reanalysis_2026/`, in this order:
 - `reanalysis_2026/data/wang2025/`: files released by Wang et al. on Zenodo under CC BY 4.0, copied here unchanged so
   that the scripts run without downloads.
   - `1_Annual_sediment_load.xlsx`, `2_Annual_active_land_area.xlsx`: https://doi.org/10.5281/zenodo.15965855
-  - `GSW_100.xlsx`, `original_land_19902020.mat`, `smooth_land_19902020.mat`, `smooth_sediment_load_19902020.mat`,
+  - `GSW_100.xlsx`, `original_land_19902020.mat`, `smooth_land_19902020.mat`, `smooth_sediment_load_19902020.mat`, `original_sediment_load_19902020.mat`,
     `delta_timelag_regression_results.mat`, `Data2_lag_times_hydro_forcings.xlsx`: https://doi.org/10.5281/zenodo.20281243
 
 ## Earlier analysis (2025, repository root)

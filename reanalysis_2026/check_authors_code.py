@@ -5,15 +5,12 @@ import numpy as np
 import pandas as pd
 import scipy.io as sio
 from scipy import stats
-from load import DATA, OUT, authors, gsw, gsw_full, mat
+from load import DATA, OUT, SRC, authors, authors_own, gsw, gsw_full, mat
 
 Q, A = authors(); G = gsw(); names = list(A.columns)
 L, O, S = mat('smooth_land_19902020'), mat('original_land_19902020'), mat('smooth_sediment_load_19902020')
 RES = sio.loadmat(DATA / "delta_timelag_regression_results.mat")["results"]
 info = pd.read_excel(DATA / 'Data2_lag_times_hydro_forcings.xlsx')
-# delta -> column (delta name) that actually holds its land series, see section 6
-SRC = {'Zambezi': 'Liaohe', 'Mackenzie': 'Minjiang', 'Burdekin': 'Zambezi', 'Sebou': 'Mackenzie', 'Paraiba Do Sul': 'Burdekin',
-       'Murray': 'Sebou', 'Dnieper (Dnepr)': 'Paraiba Do Sul', 'Brahmani': 'Murray', 'Liaohe': 'Dnieper (Dnepr)', 'Minjiang': 'Brahmani'}
 
 
 def matlab_xcorr(y, x, maxlag):
@@ -52,6 +49,14 @@ print('\n== 2. "No data" in the 60 polygons')
 f = G['nodata_frac']
 print('deltas with >10%% no data in at least one year: %d; >50%%: %d' % ((f.max() > 0.1).sum(), (f.max() > 0.5).sum()))
 print('delta-years >10%% no data: 1990-2000 %.0f%%, 2001-2020 %.0f%%' % (100 * (f.loc[:2000] > 0.1).values.mean(), 100 * (f.loc[2001:] > 0.1).values.mean()))
+flag = (G['notwater'] == 0) | (G['seasonal_water'] == 0)          # the only years their code treats as missing
+gap = f > 0.1
+print('delta-years with >10%% no data: %d; flagged missing by their code (area exactly zero): %d, all of them 100%% unobserved: %s'
+      % (gap.values.sum(), (gap & flag).values.sum(), bool(f.values[flag.values].min() > 0.999)))
+ref = G['land'].where(f < 0.01).loc[2001:].median()               # typical land of each delta in gap-free years
+kept = gap & ~flag
+print('kept as data: %d delta-years; land relative to the 2001-2020 median: %.0f%% before smoothing, %.0f%% after (medians)'
+      % (kept.values.sum(), 100 * (G['land'] / ref).where(kept).stack().median(), 100 * (authors_own() / ref).where(kept).stack().median()))
 d = 'Ganges-Brahmaputra'
 print('Ganges 1994-1999: no data %s %%' % np.round(100 * f.loc[1994:1999, d].values).astype(int))
 print('   unsmoothed land %s km2' % np.round(O[4:10, names.index(d)]).astype(int))
@@ -64,6 +69,8 @@ k, cm, c6, p1, p2 = figure3(L, S)
 print('published (smoothed): lag %d, peak r = %.3f (paper: 0.218); P = %.3f with their regression pairing, %.3f with the xcorr pairing' % (k, cm, p1, p2))
 k, cm, c6, _, _ = figure3(O, S)
 print('their unsmoothed land: highest peak at lag %d (r = %.3f); r at 6 years = %.3f' % (k, cm, c6))
+k, cm, c6, _, _ = figure3(O, mat('original_sediment_load_19902020'))
+print('their unsmoothed land and unsmoothed sediment: highest peak at lag %d (r = %.3f); r at 6 years = %.3f' % (k, cm, c6))
 ch = info.iloc[:, 5].values
 for lab, cols in (('24 deltas, increasing load', ch > 0), ('36 deltas, decreasing load', ch < 0)):
     k, cm, _, p1, _ = figure3(L[:, cols], S[:, cols]); print('%s: lag %d, r = %.3f, P = %.3f' % (lab, k, cm, p1))
@@ -86,9 +93,15 @@ nw = pd.read_excel(DATA / 'GSW_100.xlsx', sheet_name='not_water', header=None).v
 ours = gsw_full()['notwater'].values
 exact = [np.abs(ours - nw[:, [j]]).max(0).argmin() == j for j in range(60)]
 print('GSW_100.xlsx columns in polygon order: %d/60' % sum(exact))
-mean_pub, mean_own = L.mean(0), G['land'].mean().values
-wrong = [n for j, n in enumerate(names) if abs(mean_pub[j] / mean_own[j] - 1) > 0.3]
-print('published series differing >30%% from the land in their own polygon: %s' % wrong)
+land = G['land'].values
+holds = [int(np.abs(land - O[:, [j]]).max(0).argmin()) for j in range(60)]     # polygon whose series sits in column j
+shifted = {names[j]: names[p] for j, p in enumerate(holds) if p != j}
+print("columns of their land files that hold another delta's series: %d" % len(shifted))
+for lab, poly in shifted.items():
+    print('   published as %-16s = polygon %-16s (published mean %7.1f km2; own polygon %7.1f km2)'
+          % (lab, poly, L[:, names.index(lab)].mean(), land[:, names.index(lab)].mean()))
+assert shifted == {v: k for k, v in SRC.items()}
+mean_pub, mean_own = L.mean(0), land.mean(0)
 Lc = L.copy()
 for delta, col in SRC.items():          # the correct series of each delta sits in the column of the delta that read it
     Lc[:, names.index(delta)] = L[:, names.index(col)]

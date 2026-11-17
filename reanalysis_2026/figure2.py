@@ -89,10 +89,10 @@ sr = np.array([xcorr(q, s, 25, 'coeff')[1] for s in phase_surrogates(d_pub, 1000
 lags = C.index.values; keep = (lags >= -15) & (lags <= 15)
 lo95, hi95 = np.nanpercentile(sr, 2.5, 0), np.nanpercentile(sr, 97.5, 0)
 a.fill_between(lags[keep], lo95[keep], hi95[keep], color='0.88', lw=0, label='95% chance range')
-for key, col, off, lab in [('authors', 'k', -0.17, 'Published (smoothed)'), ('gsw_raw', ORANGE, 0.17, 'Unsmoothed data of ref. 1')]:
+for key, col, off, lab in [('published', 'k', -0.17, 'Published (smoothed)'), ('unsmoothed', ORANGE, 0.17, 'Unsmoothed data of ref. 1')]:
     y = C[key].values[keep]; x = lags[keep] + off
     a.vlines(x, 0, y, color=col, lw=1.0); a.plot(x, y, 'o', color=col, ms=2.6, label=lab)
-r6 = C.loc[6, 'authors']
+r6 = C.loc[6, 'published']
 a.plot(6 - 0.17, r6, 'o', color='k', ms=5.5, zorder=5)
 a.annotate('reported lag:\n6 years', (6 - 0.17, r6), xytext=(9.3, 0.50), fontsize=6.3, ha='left', va='center',
            arrowprops=dict(arrowstyle='-', lw=0.6, color='k'))
@@ -103,21 +103,19 @@ a.legend(fontsize=6, loc='upper left', frameon=False, handlelength=1.2, borderax
 
 # ---- g: correlation at the 6-year lag for each treatment of the data
 a = fig.add_subplot(right[2])
-rows = [('authors', 'Published\n(smoothed)', 'k'), ('gsw_raw', 'Unsmoothed\ndata of ref. 1', ORANGE),
-        ('gsw_masked', 'Gap years\nremoved', BLUE), ('authors_clean', '27 deltas\nwithout gaps', BLUE),
-        ('authors_post2000', '2000–2020\nonly', BLUE)]
+rows = [('published', 'Published\n(smoothed)', 'k'), ('unsmoothed', 'Unsmoothed\ndata of ref. 1', ORANGE),
+        ('gaps_removed', 'Gap years\nremoved', BLUE), ('gaps_removed_smo', 'Gap years removed,\nthen smoothed', BLUE),
+        ('gapfree_deltas', '27 deltas\nwithout gaps', BLUE), ('post2000', '2000–2020\nonly', BLUE)]
 ypos = np.arange(len(rows))[::-1]
 i6 = np.where(lags == 6)[0][0]
 a.axvspan(lo95[i6], hi95[i6], color='0.88', lw=0)
 a.text(lo95[i6] + 0.01, ypos[0] + 0.5, 'chance range', fontsize=6, ha='left', va='bottom', color='0.35')
 for yy, (key, lab, col) in zip(ypos, rows):
     v = R.loc[key, 'r_lag6']
-    a.barh(yy, v, color=col, height=0.55)
+    a.barh(yy, v, color=col, height=0.6)
     a.text(v + (0.012 if v > 0 else -0.012), yy, ('%+.2f' % v).replace('-', '−'), ha='left' if v > 0 else 'right',
            va='center', fontsize=6.3)
-    a.text(0.50, yy, '%d yr' % R.loc[key, 'peak_lag'], ha='right', va='center', fontsize=6.3)
-a.text(0.50, ypos[0] + 0.5, 'peak lag', fontsize=6, ha='right', va='bottom', color='0.35')
-a.axvline(0, color='k', lw=0.5); a.set_xlim(-0.47, 0.50); a.set_ylim(-0.55, len(rows) - 0.05)
+a.axvline(0, color='k', lw=0.5); a.set_xlim(-0.42, 0.42); a.set_ylim(-0.6, len(rows) - 0.05)
 a.set_yticks(ypos); a.set_yticklabels([r[1] for r in rows], fontsize=6.3); a.tick_params(axis='y', length=0)
 a.spines['left'].set_visible(False); a.set_xticks([-0.2, 0, 0.2])
 a.set_xlabel('Cross-correlation at the 6-year lag'); a.set_title('g  Correlation at the reported 6-year lag', x=-0.22)
